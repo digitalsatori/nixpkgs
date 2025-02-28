@@ -1,51 +1,87 @@
-{ buildPythonPackage
-, fetchFromGitHub
-, jaxlib
-, keras
-, lib
-, matplotlib
-, msgpack
-, numpy
-, optax
-, pytest-xdist
-, pytestCheckHook
-, tensorflow
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
+  jax,
+  msgpack,
+  numpy,
+  optax,
+  orbax-checkpoint,
+  pyyaml,
+  rich,
+  tensorstore,
+  typing-extensions,
+
+  # optional-dependencies
+  matplotlib,
+
+  # dependencies
+  cloudpickle,
+  keras,
+  einops,
+  flaxlib,
+  pytestCheckHook,
+  pytest-xdist,
+  sphinx,
+  tensorflow,
+  treescope,
+
+  writeScript,
+  tomlq,
 }:
 
 buildPythonPackage rec {
   pname = "flax";
-  version = "0.4.1";
+  version = "0.10.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "google";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "0j5ngdndm9nm49gcda7m36qzwk5lcbi4jnij9fi96vld54ip6f6v";
+    repo = "flax";
+    tag = "v${version}";
+    hash = "sha256-PRKdtltiBVX9p6Sjw4sCDghqxYRxq4L9TLle1vy5dkk=";
   };
 
-  buildInputs = [ jaxlib ];
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
-  propagatedBuildInputs = [
-    matplotlib
+  dependencies = [
+    flaxlib
+    jax
     msgpack
     numpy
     optax
+    orbax-checkpoint
+    pyyaml
+    rich
+    tensorstore
+    treescope
+    typing-extensions
   ];
 
-  pythonImportsCheck = [
-    "flax"
-  ];
+  optional-dependencies = {
+    all = [ matplotlib ];
+  };
 
-  checkInputs = [
+  pythonImportsCheck = [ "flax" ];
+
+  nativeCheckInputs = [
+    cloudpickle
     keras
-    pytest-xdist
+    einops
     pytestCheckHook
+    pytest-xdist
+    sphinx
     tensorflow
-  ];
-
-  pytestFlagsArray = [
-    "-W ignore::FutureWarning"
-    "-W ignore::DeprecationWarning"
   ];
 
   disabledTestPaths = [
@@ -59,12 +95,30 @@ buildPythonPackage rec {
     # `tensorflow_datasets`, `vocabulary`) so the benefits of trying to run them
     # would be limited anyway.
     "examples/*"
+
+    # See https://github.com/google/flax/issues/3232.
+    "tests/jax_utils_test.py"
   ];
 
-  meta = with lib; {
+  disabledTests = lib.optionals stdenv.hostPlatform.isDarwin [
+    # SystemError: nanobind::detail::nb_func_error_except(): exception could not be translated!
+    "test_ref_changed"
+    "test_structure_changed"
+  ];
+
+  passthru = {
+    updateScript = writeScript "update.sh" ''
+      nix-update flax # does not --build by default
+      nix-build . -A flax.src # src is essentially a passthru
+      nix-update flaxlib --version="$(${lib.getExe tomlq} <result/Cargo.toml .something.version)" --commit
+    '';
+  };
+
+  meta = {
     description = "Neural network library for JAX";
     homepage = "https://github.com/google/flax";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ ndl ];
+    changelog = "https://github.com/google/flax/releases/tag/v${version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ ndl ];
   };
 }

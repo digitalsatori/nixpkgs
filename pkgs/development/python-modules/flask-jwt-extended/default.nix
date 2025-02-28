@@ -1,43 +1,49 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, flask
-, pyjwt
-, pytestCheckHook
-, python-dateutil
-, pythonOlder
-, werkzeug
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  cryptography,
+  flask,
+  pyjwt,
+  pytestCheckHook,
+  python-dateutil,
+  pythonOlder,
+  setuptools,
+  werkzeug,
 }:
 
 buildPythonPackage rec {
   pname = "flask-jwt-extended";
-  version = "4.4.2";
-  format = "setuptools";
+  version = "4.7.1";
+  pyproject = true;
 
   disabled = pythonOlder "3.7";
 
   src = fetchPypi {
-    pname = "Flask-JWT-Extended";
+    pname = "flask_jwt_extended";
     inherit version;
-    hash = "sha256-9YK7qYD89yirclDbtvvcqNTgdOJOspFbARhDdv//mMc=";
+    hash = "sha256-gIXWdXUFtvMpGiY4yE0gfo8K0N5mLR9Gqi935ligyXY=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     flask
     pyjwt
     python-dateutil
     werkzeug
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  optional-dependencies.asymmetric_crypto = [ cryptography ];
 
-  pythonImportsCheck = [
-    "flask_jwt_extended"
-  ];
+  nativeCheckInputs = [
+    pytestCheckHook
+  ] ++ lib.flatten (lib.attrValues optional-dependencies);
+
+  pythonImportsCheck = [ "flask_jwt_extended" ];
 
   meta = with lib; {
+    changelog = "https://github.com/vimalloc/flask-jwt-extended/releases/tag/${version}";
     description = "JWT extension for Flask";
     homepage = "https://flask-jwt-extended.readthedocs.io/";
     license = licenses.mit;

@@ -1,5 +1,11 @@
-{ stdenv, lib, fetchFromGitHub
-, cmake, pkg-config, udev, protobuf
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  cmake,
+  pkg-config,
+  udev,
+  protobuf,
 }:
 
 stdenv.mkDerivation rec {
@@ -24,11 +30,18 @@ stdenv.mkDerivation rec {
 
   propagatedBuildInputs = [ protobuf ];
 
+  postFixup = ''
+    substituteInPlace "$out"/lib/pkgconfig/codecserver.pc \
+      --replace '=''${prefix}//' '=/' \
+      --replace '=''${exec_prefix}//' '=/'
+  '';
+
   meta = with lib; {
     homepage = "https://github.com/jketterl/codecserver";
     description = "Modular audio codec server";
     license = licenses.gpl3Only;
     platforms = platforms.unix;
     maintainers = teams.c3d2.members;
+    mainProgram = "codecserver";
   };
 }

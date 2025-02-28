@@ -1,46 +1,80 @@
-{ lib
-, fetchFromGitHub
-, buildPythonPackage
-, geckodriver
-, pytestCheckHook
-, pythonOlder
-, trio
-, trio-websocket
-, urllib3
-, nixosTests
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  selenium-manager,
+  setuptools,
+  certifi,
+  pytestCheckHook,
+  pythonOlder,
+  trio,
+  trio-websocket,
+  typing-extensions,
+  websocket-client,
+  urllib3,
+  pytest-trio,
+  nixosTests,
+  stdenv,
+  python,
 }:
 
 buildPythonPackage rec {
   pname = "selenium";
-  version = "4.2.0";
-  disabled = pythonOlder "3.7";
+  version = "4.28.0";
+  pyproject = true;
+
+  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "SeleniumHQ";
     repo = "selenium";
-    rev = "selenium-${version}"; # check if there is a newer tag with -python suffix
-    sha256 = "sha256-KhBCMsWGRD7hJqumA1+K8AVhJ7hq26XkEa1QbgY0Q0w=";
+    tag = "selenium-${version}" + lib.optionalString (lib.versions.patch version != "0") "-python";
+    hash = "sha256-b5xwuZ4lcwLbGhJuEmHYrFXoaTW/M0ABdK3dvbpj8oM=";
   };
 
-  postPatch = ''
-    substituteInPlace py/selenium/webdriver/firefox/service.py \
-      --replace 'DEFAULT_EXECUTABLE_PATH = "geckodriver"' 'DEFAULT_EXECUTABLE_PATH = "${geckodriver}/bin/geckodriver"'
-  '';
+  patches = [ ./dont-build-the-selenium-manager.patch ];
 
   preConfigure = ''
     cd py
   '';
 
-  propagatedBuildInputs = [
+  postInstall =
+    ''
+      DST_PREFIX=$out/${python.sitePackages}/selenium/webdriver/
+      DST_REMOTE=$DST_PREFIX/remote/
+      DST_FF=$DST_PREFIX/firefox
+      cp ../rb/lib/selenium/webdriver/atoms/getAttribute.js $DST_REMOTE
+      cp ../rb/lib/selenium/webdriver/atoms/isDisplayed.js $DST_REMOTE
+      cp ../rb/lib/selenium/webdriver/atoms/findElements.js $DST_REMOTE
+      cp ../javascript/cdp-support/mutation-listener.js $DST_REMOTE
+      cp ../third_party/js/selenium/webdriver.json $DST_FF/webdriver_prefs.json
+    ''
+    + lib.optionalString stdenv.hostPlatform.isDarwin ''
+      mkdir -p $DST_PREFIX/common/macos
+      ln -s ${lib.getExe selenium-manager} $DST_PREFIX/common/macos/
+    ''
+    + lib.optionalString stdenv.hostPlatform.isLinux ''
+      mkdir -p $DST_PREFIX/common/linux/
+      ln -s ${lib.getExe selenium-manager} $DST_PREFIX/common/linux/
+    '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    certifi
     trio
     trio-websocket
     urllib3
-  ] ++ urllib3.optional-dependencies.secure
-  ++ urllib3.optional-dependencies.socks;
+    typing-extensions
+    websocket-client
+  ] ++ urllib3.optional-dependencies.socks;
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
+    pytest-trio
   ];
+
+  __darwinAllowLocalNetworking = true;
 
   passthru.tests = {
     testing-vaultwarden = nixosTests.vaultwarden;

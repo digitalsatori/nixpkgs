@@ -1,38 +1,67 @@
-{ stdenv, rustPlatform, fetchFromGitHub, lib, ruby, which}:
+{
+  lib,
+  stdenv,
+  rustPlatform,
+  fetchFromGitHub,
+  ruby,
+  which,
+  nix-update-script,
+}:
+
 rustPlatform.buildRustPackage rec {
   pname = "rbspy";
-  version = "0.12.1";
+  version = "0.31.0";
 
   src = fetchFromGitHub {
-    owner = pname;
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "FnUUX7qQWVZMHtWvneTLzBL1YYwF8v4e1913Op4Lvbw=";
+    owner = "rbspy";
+    repo = "rbspy";
+    tag = "v${version}";
+    hash = "sha256-U+HqTAU6b1tVlg7xcttmbZtLGlN1dFYxIkrBkMhi+ck=";
   };
 
-  cargoSha256 = "98vmUoWSehX/9rMlHNSvKHJvJxW99pOhS08FI3OeLGo=";
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-kPnkhR/Er1MflmEfFlNSW+qt2+y27TxnBsKsmTTkaQA=";
+
+  # error: linker `aarch64-linux-gnu-gcc` not found
+  postPatch = ''
+    rm .cargo/config
+  '';
+
   doCheck = true;
 
-  # Tests in initialize.rs rely on specific PIDs being queried and attaching
-  # tracing to forked processes, which don't work well with the isolated build.
+  # The current implementation of rbspy fails to detect the version of ruby
+  # from nixpkgs during tests.
   preCheck = ''
     substituteInPlace src/core/process.rs \
       --replace /usr/bin/which '${which}/bin/which'
     substituteInPlace src/sampler/mod.rs \
       --replace /usr/bin/which '${which}/bin/which'
-    substituteInPlace src/core/initialize.rs \
-      --replace 'fn test_initialize_with_disallowed_process(' '#[ignore] fn test_initialize_with_disallowed_process(' \
-      --replace 'fn test_get_exec_trace(' '#[ignore] fn test_get_exec_trace(' \
+    substituteInPlace src/core/ruby_spy.rs \
+      --replace /usr/bin/ruby '${ruby}/bin/ruby'
   '';
 
-  nativeBuildInputs = [ ruby which ];
+  checkFlags = [
+    "--skip=test_get_trace"
+    "--skip=test_get_trace_when_process_has_exited"
+    "--skip=test_sample_single_process"
+    "--skip=test_sample_single_process_with_time_limit"
+    "--skip=test_sample_subprocesses"
+  ];
+
+  nativeBuildInputs = lib.optional stdenv.hostPlatform.isDarwin rustPlatform.bindgenHook;
+
+  nativeCheckInputs = [
+    ruby
+    which
+  ];
+
+  passthru.updateScript = nix-update-script { };
 
   meta = with lib; {
-    broken = (stdenv.isLinux && stdenv.isAarch64);
     homepage = "https://rbspy.github.io/";
-    description = ''
-      A Sampling CPU Profiler for Ruby.
-    '';
+    description = "Sampling CPU Profiler for Ruby";
+    mainProgram = "rbspy";
+    changelog = "https://github.com/rbspy/rbspy/releases/tag/v${version}";
     license = licenses.mit;
     maintainers = with maintainers; [ viraptor ];
     platforms = platforms.linux ++ platforms.darwin;

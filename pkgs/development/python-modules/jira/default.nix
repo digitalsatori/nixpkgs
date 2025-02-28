@@ -1,60 +1,78 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, defusedxml
-, flaky
-, keyring
-, requests-mock
-, requests-oauthlib
-, requests-toolbelt
-, setuptools-scm
-, setuptools-scm-git-archive
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  defusedxml,
+  flaky,
+  ipython,
+  keyring,
+  packaging,
+  pillow,
+  pyjwt,
+  pytestCheckHook,
+  pytest-cov-stub,
+  pythonOlder,
+  requests,
+  requests-futures,
+  requests-mock,
+  requests-oauthlib,
+  requests-toolbelt,
+  setuptools,
+  setuptools-scm,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "jira";
-  version = "3.1.1";
-  format = "setuptools";
+  version = "3.9.4";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "pycontribs";
-    repo = pname;
-    rev = version;
-    hash = "sha256-1g7yNKRR7Ua2rjfiE1c94LKAQGVCX0gSeqTc2Pn7QhM=";
+    repo = "jira";
+    tag = version;
+    hash = "sha256-P3dbrBKpHvLNIA+JBeSXEQl4QVZ0FdKkNIU8oPHWw6k=";
   };
 
-  nativeBuildInputs = [
+  build-system = [
+    setuptools
     setuptools-scm
-    setuptools-scm-git-archive
   ];
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
-
-  propagatedBuildInputs = [
+  dependencies = [
     defusedxml
-    keyring
+    packaging
+    requests
     requests-oauthlib
     requests-toolbelt
+    pillow
+    typing-extensions
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    cli = [
+      ipython
+      keyring
+    ];
+    opt = [
+      # filemagic
+      pyjwt
+      # requests-jwt
+      # requests-keyberos
+    ];
+    async = [ requests-futures ];
+  };
+
+  nativeCheckInputs = [
     flaky
     pytestCheckHook
+    pytest-cov-stub
     requests-mock
   ];
 
-  postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "--cov-report=xml --cov jira" ""
-  '';
-
-  pythonImportsCheck = [
-    "jira"
-  ];
+  pythonImportsCheck = [ "jira" ];
 
   # impure tests because of connectivity attempts to jira servers
   doCheck = false;
@@ -62,7 +80,9 @@ buildPythonPackage rec {
   meta = with lib; {
     description = "Library to interact with the JIRA REST API";
     homepage = "https://github.com/pycontribs/jira";
+    changelog = "https://github.com/pycontribs/jira/releases/tag/${src.tag}";
     license = licenses.bsd2;
-    maintainers = with maintainers; [ globin ];
+    maintainers = [ ];
+    mainProgram = "jirashell";
   };
 }

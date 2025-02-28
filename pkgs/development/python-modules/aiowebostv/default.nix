@@ -1,38 +1,39 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, websockets
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+  setuptools,
+  aiohttp,
 }:
 
 buildPythonPackage rec {
   pname = "aiowebostv";
-  version = "0.2.0";
-  format = "setuptools";
+  version = "0.6.2";
+  pyproject = true;
 
-  disabled = pythonOlder "3.8";
+  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "home-assistant-libs";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-A7GiAQIuEXmCfo2pDJESCdAEaLumi1ACXnBMdGKwSvE=";
+    repo = "aiowebostv";
+    tag = "v${version}";
+    hash = "sha256-H5ZhG69F5w1fZBepxqWGo29XnK3Tn6dgota64k2GJbw=";
   };
 
-  propagatedBuildInputs = [
-    websockets
-  ];
+  build-system = [ setuptools ];
+
+  dependencies = [ aiohttp ];
 
   # Module doesn't have tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "aiowebostv"
-  ];
+  pythonImportsCheck = [ "aiowebostv" ];
 
   meta = with lib; {
     description = "Module to interact with LG webOS based TV devices";
     homepage = "https://github.com/home-assistant-libs/aiowebostv";
+    changelog = "https://github.com/home-assistant-libs/aiowebostv/releases/tag/v${version}";
     license = with licenses; [ asl20 ];
     maintainers = with maintainers; [ fab ];
   };

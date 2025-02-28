@@ -39,7 +39,7 @@ in
         }
       '';
       description = ''
-        Configuration for RouteDNS, see <link xlink:href="https://github.com/folbricht/routedns/blob/master/doc/configuration.md"/>
+        Configuration for RouteDNS, see <https://github.com/folbricht/routedns/blob/master/doc/configuration.md>
         for more information.
       '';
     };
@@ -52,12 +52,7 @@ in
       description = "Path to RouteDNS TOML configuration file.";
     };
 
-    package = mkOption {
-      default = pkgs.routedns;
-      defaultText = literalExpression "pkgs.routedns";
-      type = types.package;
-      description = "RouteDNS package to use.";
-    };
+    package = mkPackageOption pkgs "routedns" { };
   };
 
   config = mkIf cfg.enable {

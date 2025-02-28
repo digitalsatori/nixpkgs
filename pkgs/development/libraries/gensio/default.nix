@@ -1,33 +1,38 @@
-{ autoreconfHook
-, fetchFromGitHub
-, lib
-, nix-update-script
-, pkg-config
-, stdenv
+{
+  autoreconfHook,
+  fetchFromGitHub,
+  lib,
+  nix-update-script,
+  openssl,
+  pkg-config,
+  stdenv,
 }:
 
 stdenv.mkDerivation rec {
   pname = "gensio";
-  version = "2.3.7";
+  version = "2.8.12";
 
   src = fetchFromGitHub {
     owner = "cminyard";
     repo = pname;
     rev = "v${version}";
-    sha256 = "sha256-g1o/udsIFLJ+gunvI2QtsnksPaa946jWKkcdmdGmQ/k=";
+    sha256 = "sha256-DlveXTkdNu6Pb/0sL9K5HaOJ9HEhv2gwk5Kka9nI7U0=";
   };
 
   passthru = {
-    updateScript = nix-update-script {
-      attrPath = pname;
-    };
+    updateScript = nix-update-script { };
   };
 
   configureFlags = [
     "--with-python=no"
   ];
 
-  nativeBuildInputs = [ autoreconfHook pkg-config ];
+  nativeBuildInputs = [
+    autoreconfHook
+    pkg-config
+  ];
+
+  buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [ openssl ];
 
   meta = with lib; {
     description = "General Stream I/O";

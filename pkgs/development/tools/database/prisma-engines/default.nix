@@ -1,38 +1,36 @@
-{ fetchFromGitHub
-, lib
-, Security
-, openssl
-, pkg-config
-, protobuf
-, rustPlatform
-, stdenv
+{
+  fetchFromGitHub,
+  lib,
+  openssl,
+  pkg-config,
+  protobuf,
+  rustPlatform,
+  stdenv,
 }:
 
-# Updating this package will force an update for nodePackages.prisma. The
-# version of prisma-engines and nodePackages.prisma must be the same for them to
+# Updating this package will force an update for prisma. The
+# version of prisma-engines and prisma must be the same for them to
 # function correctly.
 rustPlatform.buildRustPackage rec {
   pname = "prisma-engines";
-  version = "4.0.0";
+  version = "6.3.0";
 
   src = fetchFromGitHub {
     owner = "prisma";
     repo = "prisma-engines";
     rev = version;
-    sha256 = "sha256-TlKjAfpygQq2c77d6ZoMIBtWC0bAiMiKygFkh5GrBBc=";
+    hash = "sha256-gQLDskabTaNk19BJi9Kv4TiEfVck2QZ7xdhopt5KH6M=";
   };
+
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-GLOGivOH8psE5/M5kYakh9Cab4Xe5Q8isY1c6YDyAB8=";
 
   # Use system openssl.
   OPENSSL_NO_VENDOR = 1;
 
-  cargoSha256 = "sha256-//Kis4lDi3SxeptCCnLi/GWPj+Kyay2pQbILYnlEkXE=";
-
   nativeBuildInputs = [ pkg-config ];
 
-  buildInputs = [
-    openssl
-    protobuf
-  ] ++ lib.optionals stdenv.isDarwin [ Security ];
+  buildInputs = [ openssl ];
 
   preBuild = ''
     export OPENSSL_DIR=${lib.getDev openssl}
@@ -43,9 +41,20 @@ rustPlatform.buildRustPackage rec {
 
     export SQLITE_MAX_VARIABLE_NUMBER=250000
     export SQLITE_MAX_EXPR_DEPTH=10000
+
+    export GIT_HASH=0000000000000000000000000000000000000000
   '';
 
-  cargoBuildFlags = "-p query-engine -p query-engine-node-api -p migration-engine-cli -p introspection-core -p prisma-fmt";
+  cargoBuildFlags = [
+    "-p"
+    "query-engine"
+    "-p"
+    "query-engine-node-api"
+    "-p"
+    "schema-engine-cli"
+    "-p"
+    "prisma-fmt"
+  ];
 
   postInstall = ''
     mv $out/lib/libquery_engine${stdenv.hostPlatform.extensions.sharedLibrary} $out/lib/libquery_engine.node
@@ -55,11 +64,16 @@ rustPlatform.buildRustPackage rec {
   doCheck = false;
 
   meta = with lib; {
-    description = "A collection of engines that power the core stack for Prisma";
+    description = "Collection of engines that power the core stack for Prisma";
     homepage = "https://www.prisma.io/";
     license = licenses.asl20;
     platforms = platforms.unix;
-    maintainers = with maintainers; [ pamplemousse pimeys superherointj ];
+    mainProgram = "prisma";
+    maintainers = with maintainers; [
+      pimeys
+      tomhoule
+      aqrln
+    ];
   };
 }
 
@@ -67,7 +81,7 @@ rustPlatform.buildRustPackage rec {
 # Here's an example application using Prisma with Nix: https://github.com/pimeys/nix-prisma-example
 # At example's `flake.nix` shellHook, notice the requirement of defining environment variables for prisma, it's values will show on `prisma --version`.
 # Read the example's README: https://github.com/pimeys/nix-prisma-example/blob/main/README.md
-# Prisma requires 2 packages, `prisma-engines` and `nodePackages.prisma`, to be at *exact* same versions.
+# Prisma requires 2 packages, `prisma-engines` and `prisma`, to be at *exact* same versions.
 # Certify at `package.json` that dependencies "@prisma/client" and "prisma" are equal, meaning no caret (`^`) in version.
 # Configure NPM to use exact version: `npm config set save-exact=true`
 # Delete `package-lock.json`, delete `node_modules` directory and run `npm install`.

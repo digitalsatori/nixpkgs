@@ -1,27 +1,33 @@
-{ mkDerivation
-, lib
-, cmake
-, extra-cmake-modules
-, pkg-config
-, SDL2
-, qttools
-, xorg
-, fetchFromGitHub
-, itstool
+{
+  mkDerivation,
+  lib,
+  cmake,
+  extra-cmake-modules,
+  pkg-config,
+  SDL2,
+  qttools,
+  xorg,
+  fetchFromGitHub,
+  itstool,
 }:
 
 mkDerivation rec {
   pname = "antimicrox";
-  version = "3.2.4";
+  version = "3.5.1";
 
   src = fetchFromGitHub {
     owner = "AntiMicroX";
     repo = pname;
     rev = version;
-    sha256 = "sha256-catgal3bpWJUcTo0x0V0X3VV87AHO2Dp58IpQ/ILsZ8=";
+    sha256 = "sha256-ZIHhgyOpabWkdFZoha/Hj/1d8/b6qVolE6dn0xAFZVw=";
   };
 
-  nativeBuildInputs = [ cmake extra-cmake-modules pkg-config itstool ];
+  nativeBuildInputs = [
+    cmake
+    extra-cmake-modules
+    pkg-config
+    itstool
+  ];
   buildInputs = [
     SDL2
     qttools
@@ -39,5 +45,6 @@ mkDerivation rec {
     maintainers = with maintainers; [ sbruder ];
     license = licenses.gpl3Plus;
     platforms = with platforms; linux;
+    mainProgram = "antimicrox";
   };
 }

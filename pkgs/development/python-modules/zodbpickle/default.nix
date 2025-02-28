@@ -1,22 +1,51 @@
-{ buildPythonPackage
-, isPyPy
-, fetchPypi
+{
+  lib,
+  buildPythonPackage,
+  pythonOlder,
+  fetchPypi,
+  setuptools,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "zodbpickle";
-  version = "2.3";
-  disabled = isPyPy; # https://github.com/zopefoundation/zodbpickle/issues/10
+  version = "4.1.1";
+  pyproject = true;
+
+  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-5MtccZcF6Lseju5Kok4gcaMJTs8ng9h0B6uCLxZto6I=";
+    hash = "sha256-38DJFe8Umd0GA5cPXBECxr1+t7asRkNLKabYQL8Cckg=";
   };
 
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace "setuptools<74" "setuptools"
+  '';
+
+  build-system = [ setuptools ];
+
+  pythonImportsCheck = [ "zodbpickle" ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
   # fails..
-  doCheck = false;
+  disabledTests = [
+    "test_dump"
+    "test_dumps"
+    "test_load"
+    "test_loads"
+  ];
 
   meta = {
-    homepage = "https://pypi.python.org/pypi/zodbpickle";
+    description = "Fork of Python's pickle module to work with ZODB";
+    homepage = "https://github.com/zopefoundation/zodbpickle";
+    changelog = "https://github.com/zopefoundation/zodbpickle/blob/${version}/CHANGES.rst";
+    license = with lib.licenses; [
+      psfl
+      zpl21
+    ];
+    maintainers = [ ];
   };
 }

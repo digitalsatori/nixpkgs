@@ -1,39 +1,42 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, cython
-, h5py
-, matplotlib
-, numpy
-, phonopy
-, pymatgen
-, scipy
-, seekpath
-, spglib
-, castepxbin
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+  setuptools,
+  spglib,
+  numpy,
+  scipy,
+  h5py,
+  pymatgen,
+  phonopy,
+  matplotlib,
+  seekpath,
+  castepxbin,
+  colormath,
+  importlib-resources,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "sumo";
-  version = "2.3.0";
-  format = "setuptools";
+  version = "2.3.10";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "SMTG-UCL";
     repo = "sumo";
-    rev = "refs/tags/v${version}";
-    sha256 = "sha256-apI5Qt7Wrr4FXKL48iqqIQJDX2BIf3PPz/qIgSO7nuo=";
+    tag = "v${version}";
+    hash = "sha256-WoOW+JPo5x9V6LN+e8Vf3Q3ohHhQVK81s0Qk7oPn1Tk=";
   };
 
-  nativeBuildInputs = [
-    cython
+  build-system = [
+    setuptools
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     spglib
     numpy
     scipy
@@ -43,30 +46,21 @@ buildPythonPackage rec {
     matplotlib
     seekpath
     castepxbin
+    colormath
+    importlib-resources
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
   ];
 
-  disabledTests = [
-    # slight disagreement between caastepxbin versions
-    "test_castep_phonon_read_bands"
-  ];
+  pythonImportsCheck = [ "sumo" ];
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "castepxbin==0.1.0" "castepxbin>=0.1.0"
-  '';
-
-  pythonImportsCheck = [
-    "sumo"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Toolkit for plotting and analysis of ab initio solid-state calculation data";
     homepage = "https://github.com/SMTG-UCL/sumo";
-    license = licenses.mit;
-    maintainers = with maintainers; [ psyanticy ];
+    changelog = "https://github.com/SMTG-Bham/sumo/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ psyanticy ];
   };
 }

@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.services.hardware.argonone;
@@ -9,7 +14,7 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.argononed;
-      defaultText = "pkgs.argononed";
+      defaultText = lib.literalExpression "pkgs.argononed";
       description = ''
         The package implementing the Argon One driver
       '';

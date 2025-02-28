@@ -1,32 +1,35 @@
-{ lib, stdenv
-, buildPythonPackage
-, fetchPypi
-, isPy3k
-, cli-helpers
-, click
-, configobj
-, prompt-toolkit
-, psycopg2
-, pygments
-, sqlparse
-, pgspecial
-, setproctitle
-, keyring
-, pendulum
-, pytestCheckHook
-, sshtunnel
-, mock
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchPypi,
+  cli-helpers,
+  click,
+  configobj,
+  prompt-toolkit,
+  psycopg,
+  pygments,
+  sqlparse,
+  pgspecial,
+  setproctitle,
+  keyring,
+  pendulum,
+  pytestCheckHook,
+  setuptools,
+  sshtunnel,
+  mock,
 }:
 
 # this is a pythonPackage because of the ipython line magics in pgcli.magic
 # integrating with ipython-sql
 buildPythonPackage rec {
   pname = "pgcli";
-  version = "3.4.1";
+  version = "4.1.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-8DkwGH4n1g32WMqKBPtgHsXXR2xzXysVQsat7Fysj+I=";
+    hash = "sha256-P9Fsi1G9AUX/YYwscyZLzYVLqGaqIG1PB2hR9kG5shU=";
   };
 
   propagatedBuildInputs = [
@@ -34,7 +37,7 @@ buildPythonPackage rec {
     click
     configobj
     prompt-toolkit
-    psycopg2
+    psycopg
     pygments
     sqlparse
     pgspecial
@@ -44,12 +47,20 @@ buildPythonPackage rec {
     sshtunnel
   ];
 
-  checkInputs = [ pytestCheckHook mock ];
+  nativeBuildInputs = [ setuptools ];
+  nativeCheckInputs = [
+    pytestCheckHook
+    mock
+  ];
 
-  disabledTests = lib.optionals stdenv.isDarwin [ "test_application_name_db_uri" ];
+  disabledTests = [
+    # requires running postgres
+    "test_application_name_in_env"
+  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ "test_application_name_db_uri" ];
 
   meta = with lib; {
     description = "Command-line interface for PostgreSQL";
+    mainProgram = "pgcli";
     longDescription = ''
       Rich command-line interface for PostgreSQL with auto-completion and
       syntax highlighting.
@@ -57,6 +68,9 @@ buildPythonPackage rec {
     homepage = "https://pgcli.com";
     changelog = "https://github.com/dbcli/pgcli/raw/v${version}/changelog.rst";
     license = licenses.bsd3;
-    maintainers = with maintainers; [ dywedir ];
+    maintainers = with maintainers; [
+      dywedir
+      SuperSandro2000
+    ];
   };
 }

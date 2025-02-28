@@ -11,30 +11,37 @@
 , lm_sensors
 , iw
 , iproute2
+, pipewire
+, withICUCalendar ? false
+, withPipewire ? true
 }:
 
 rustPlatform.buildRustPackage rec {
   pname = "i3status-rust";
-  version = "0.22.0";
+  version = "0.33.2";
 
   src = fetchFromGitHub {
     owner = "greshake";
     repo = pname;
     rev = "refs/tags/v${version}";
-    sha256 = "sha256-9Fp5k14QkV1CwLSL1nUUu6NYIpjfvI9vNJRYNqvyr3M=";
+    hash = "sha256-xJm4MsEU0OVX401WvKllg3zUwgCvjLxlAQzXE/oD1J0=";
   };
 
-  cargoSha256 = "sha256-MzosatZ4yPHAdANqOBPVW2wpjnojLo9B9N9o4DtU0Iw=";
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-EFFmH9aG7DvSA5rsAuszc1B8kcLdruSk3Hhp4V9t9Gk=";
 
-  nativeBuildInputs = [ pkg-config makeWrapper ];
+  nativeBuildInputs = [ pkg-config makeWrapper ]
+    ++ (lib.optionals withPipewire [ rustPlatform.bindgenHook ]);
 
-  buildInputs = [ dbus libpulseaudio notmuch openssl lm_sensors ];
+  buildInputs = [ dbus libpulseaudio notmuch openssl lm_sensors ]
+    ++ (lib.optionals withPipewire [ pipewire ]);
 
   buildFeatures = [
     "notmuch"
     "maildir"
     "pulseaudio"
-  ];
+  ] ++ (lib.optionals withICUCalendar [ "icu_calendar" ])
+  ++ (lib.optionals withPipewire [ "pipewire" ]);
 
   prePatch = ''
     substituteInPlace src/util.rs \
@@ -57,7 +64,8 @@ rustPlatform.buildRustPackage rec {
     description = "Very resource-friendly and feature-rich replacement for i3status";
     homepage = "https://github.com/greshake/i3status-rust";
     license = licenses.gpl3Only;
-    maintainers = with maintainers; [ backuitist globin ma27 ];
+    mainProgram = "i3status-rs";
+    maintainers = with maintainers; [ backuitist globin ];
     platforms = platforms.linux;
   };
 }

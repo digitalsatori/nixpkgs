@@ -1,60 +1,56 @@
-{ lib
-, aiofiles
-, buildPythonApplication
-, cached-property
-, fetchFromGitHub
-, git
-, pdm-pep517
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiofiles,
+  buildPythonPackage,
+  colorama,
+  fetchFromGitHub,
+  git,
+  jsonschema,
+  mkdocstrings,
+  pdm-backend,
+  pytestCheckHook,
+  pythonOlder,
 }:
 
-buildPythonApplication rec {
+buildPythonPackage rec {
   pname = "griffe";
-  version = "0.21.0";
-  format = "pyproject";
+  version = "1.5.7";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "mkdocstrings";
-    repo = pname;
-    rev = version;
-    hash = "sha256-yhhEcPwh1AjMtDlPZVDR69WX/728wuKqdJdc+yv/o4c=";
+    repo = "griffe";
+    tag = version;
+    hash = "sha256-4ulyhdPAfN5mjw6rzJsu9Y4+Pz3SfWP46qnbdLbO6Ng=";
   };
 
-  nativeBuildInputs = [
-    pdm-pep517
+  build-system = [ pdm-backend ];
+
+  dependencies = [
+    colorama
+    mkdocstrings
   ];
 
-  propagatedBuildInputs = lib.optionals (pythonOlder "3.8") [
-    cached-property
-  ];
-
-  checkInputs = [
+  nativeCheckInputs = [
     git
+    jsonschema
     pytestCheckHook
   ];
 
-  passthru.optional-dependencies = {
-    async = [
-      aiofiles
-    ];
+  optional-dependencies = {
+    async = [ aiofiles ];
   };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'dynamic = ["version"]' 'version = "${version}"'
-  '';
-
-  pythonImportsCheck = [
-    "griffe"
-  ];
+  pythonImportsCheck = [ "griffe" ];
 
   meta = with lib; {
     description = "Signatures for entire Python programs";
     homepage = "https://github.com/mkdocstrings/griffe";
+    changelog = "https://github.com/mkdocstrings/griffe/blob/${version}/CHANGELOG.md";
     license = licenses.isc;
     maintainers = with maintainers; [ fab ];
+    mainProgram = "griffe";
   };
 }

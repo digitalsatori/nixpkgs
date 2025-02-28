@@ -1,47 +1,55 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
-, requests
-, requests-oauthlib
-, responses
-, six
+{
+  lib,
+  buildPythonPackage,
+  certifi,
+  fetchFromGitHub,
+  pytestCheckHook,
+  python-dateutil,
+  python-dotenv,
+  pythonOlder,
+  setuptools,
+  six,
+  urllib3,
 }:
 
 buildPythonPackage rec {
   pname = "asana";
-  version = "1.0.0";
-  format = "setuptools";
+  version = "5.0.15";
+  pyproject = true;
 
   disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "asana";
     repo = "python-asana";
-    rev = "refs/tags/v${version}";
-    sha256 = "sha256-SbYTLGBCfKbjhyzM5OnVX6kxEMnofwPIyzwuJvYORhw=";
+    tag = "v${version}";
+    hash = "sha256-+4RGaeUgTiHOt2F1oSu06USbDh0ZrILsZAPwBUsFnJE=";
   };
 
-  propagatedBuildInputs = [
-    requests
-    requests-oauthlib
+  build-system = [ setuptools ];
+
+  dependencies = [
+    certifi
     six
+    python-dateutil
+    python-dotenv
+    urllib3
   ];
 
-  checkInputs = [
-    pytestCheckHook
-    responses
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pythonImportsCheck = [
-    "asana"
+  pythonImportsCheck = [ "asana" ];
+
+  disabledTestPaths = [
+    # Tests require network access
+    "build_tests/"
   ];
 
   meta = with lib; {
     description = "Python client library for Asana";
     homepage = "https://github.com/asana/python-asana";
+    changelog = "https://github.com/Asana/python-asana/releases/tag/v${version}";
     license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    maintainers = [ ];
   };
 }

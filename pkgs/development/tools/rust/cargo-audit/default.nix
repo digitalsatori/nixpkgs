@@ -1,36 +1,40 @@
-{ lib
-, stdenv
-, rustPlatform
-, fetchFromGitHub
-, openssl
-, pkg-config
-, Security
-, libiconv
+{
+  lib,
+  rustPlatform,
+  fetchCrate,
+  pkg-config,
+  openssl,
+  zlib,
+  stdenv,
+  Security,
+  SystemConfiguration,
 }:
 
 rustPlatform.buildRustPackage rec {
   pname = "cargo-audit";
-  version = "0.17.0";
+  version = "0.21.1";
 
-  src = fetchFromGitHub {
-    owner = "RustSec";
-    repo = "rustsec";
-    rev = "cargo-audit%2Fv${version}";
-    sha256 = "sha256-x91x5XjIRXLhs96r06ITbpHCkHoaCaMXH+VCp6f57Gg=";
+  src = fetchCrate {
+    inherit pname version;
+    hash = "sha256-h8fB+aA/MPeOm9w9Clf4IAR/h1yRGwUU8EoWCJ3JaMc=";
   };
 
-  cargoSha256 = "sha256-/CzRkdo4kfvRwOZsfyu0zL3UnjEKCBj7wj40jlydSDI=";
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-LMExTkuk7v2YkqzmsjAn1jHgteAHRzGoLG8sGvYwd3c=";
 
   nativeBuildInputs = [
     pkg-config
   ];
 
-  buildInputs = [
-    openssl
-    libiconv
-  ] ++ lib.optionals stdenv.isDarwin [
-    Security
-  ];
+  buildInputs =
+    [
+      openssl
+      zlib
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      Security
+      SystemConfiguration
+    ];
 
   buildFeatures = [ "fix" ];
 
@@ -39,8 +43,17 @@ rustPlatform.buildRustPackage rec {
 
   meta = with lib; {
     description = "Audit Cargo.lock files for crates with security vulnerabilities";
+    mainProgram = "cargo-audit";
     homepage = "https://rustsec.org";
-    license = with licenses; [ mit /* or */ asl20 ];
-    maintainers = with maintainers; [ basvandijk jk ];
+    changelog = "https://github.com/rustsec/rustsec/blob/cargo-audit/v${version}/cargo-audit/CHANGELOG.md";
+    license = with licenses; [
+      mit # or
+      asl20
+    ];
+    maintainers = with maintainers; [
+      basvandijk
+      figsoda
+      jk
+    ];
   };
 }

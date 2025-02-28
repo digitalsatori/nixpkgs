@@ -1,15 +1,36 @@
-{ lib, stdenv, cmake, fetchFromGitHub, python3, flex, bison, qt5, CoreServices, libiconv }:
+{
+  lib,
+  stdenv,
+  cmake,
+  fetchFromGitHub,
+  python3,
+  flex,
+  bison,
+  qt5,
+  CoreServices,
+  libiconv,
+  spdlog,
+  sqlite,
+}:
 
 stdenv.mkDerivation rec {
   pname = "doxygen";
-  version = "1.9.3";
+  version = "1.13.2";
 
   src = fetchFromGitHub {
     owner = "doxygen";
     repo = "doxygen";
-    rev = "Release_${lib.replaceStrings [ "." ] [ "_" ] version}";
-    sha256 = "1xfsv31ffrv03qhxlscav0r5mdi3qz4654ib9cq35rvmxfj999bw";
+    tag = "Release_${lib.replaceStrings [ "." ] [ "_" ] version}";
+    hash = "sha256-tet2Ep2Mvucg2QBJbo9A6531cJhQ9L7+ZMmo07S8cwY=";
   };
+
+  # https://github.com/doxygen/doxygen/issues/10928#issuecomment-2179320509
+  postPatch = ''
+    substituteInPlace CMakeLists.txt \
+      --replace-fail 'JAVACC_CHAR_TYPE=\"unsigned char\"' \
+                     'JAVACC_CHAR_TYPE=\"char8_t\"' \
+      --replace-fail "CMAKE_CXX_STANDARD 17" "CMAKE_CXX_STANDARD 20"
+  '';
 
   nativeBuildInputs = [
     cmake
@@ -19,23 +40,42 @@ stdenv.mkDerivation rec {
   ];
 
   buildInputs =
-       lib.optionals (qt5 != null) (with qt5; [ qtbase wrapQtAppsHook ])
-    ++ lib.optional stdenv.isSunOS libiconv
-    ++ lib.optionals stdenv.isDarwin [ CoreServices libiconv ];
+    [
+      libiconv
+      spdlog
+      sqlite
+    ]
+    ++ lib.optionals (qt5 != null) (
+      with qt5;
+      [
+        qtbase
+        wrapQtAppsHook
+      ]
+    )
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [ CoreServices ];
 
-  cmakeFlags =
-    [ "-DICONV_INCLUDE_DIR=${libiconv}/include" ] ++
-    lib.optional (qt5 != null) "-Dbuild_wizard=YES";
+  cmakeFlags = [
+    "-DICONV_INCLUDE_DIR=${libiconv}/include"
+    "-Duse_sys_spdlog=ON"
+    "-Duse_sys_sqlite3=ON"
+  ] ++ lib.optional (qt5 != null) "-Dbuild_wizard=YES";
 
-  NIX_CFLAGS_COMPILE =
-    lib.optionalString stdenv.isDarwin "-mmacosx-version-min=10.9";
+  # put examples in an output so people/tools can test against them
+  outputs = [
+    "out"
+    "examples"
+  ];
+
+  postInstall = ''
+    cp -r ../examples $examples
+  '';
 
   meta = {
     license = lib.licenses.gpl2Plus;
-    homepage = "https://www.doxygen.nl/";
+    homepage = "https://www.doxygen.nl";
     changelog = "https://www.doxygen.nl/manual/changelog.html";
     description = "Source code documentation generator tool";
-
+    mainProgram = "doxygen";
     longDescription = ''
       Doxygen is the de facto standard tool for generating documentation from
       annotated C++ sources, but it also supports other popular programming
@@ -45,7 +85,6 @@ stdenv.mkDerivation rec {
       off-line reference manual (in LaTeX) from a set of documented source
       files.
     '';
-
     platforms = if qt5 != null then lib.platforms.linux else lib.platforms.unix;
   };
 }

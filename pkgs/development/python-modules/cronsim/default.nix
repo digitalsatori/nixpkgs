@@ -1,21 +1,26 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  pythonOlder,
 }:
 
 buildPythonPackage rec {
   pname = "cronsim";
-  version = "2.1";
+  version = "2.6";
+  format = "setuptools";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-nwlSAbD+y0l9jyVSVShzWeC7nC5RZRD/kAhCi3Nd9xY=";
+  disabled = pythonOlder "3.7";
+
+  src = fetchFromGitHub {
+    owner = "cuu508";
+    repo = "cronsim";
+    tag = version;
+    hash = "sha256-WJ3v2cqAKZkXp1u8xJ0aFuyHPq0gn24DRxpnq5cH/90=";
   };
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "cronsim" ];
 

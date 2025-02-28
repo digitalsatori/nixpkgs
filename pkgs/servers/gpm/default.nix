@@ -1,5 +1,17 @@
-{ lib, stdenv, fetchFromGitHub, automake, autoconf, libtool, flex, bison, texinfo, fetchpatch, pkgsStatic
-, withNcurses ? true, ncurses
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  automake,
+  autoconf,
+  libtool,
+  flex,
+  bison,
+  texinfo,
+  fetchpatch,
+  pkgsStatic,
+  withNcurses ? true,
+  ncurses,
 }:
 
 stdenv.mkDerivation rec {
@@ -17,13 +29,21 @@ stdenv.mkDerivation rec {
     substituteInPlace src/prog/gpm-root.y --replace __sigemptyset sigemptyset
   '';
 
-  nativeBuildInputs = [ automake autoconf libtool flex bison texinfo ];
+  nativeBuildInputs = [
+    automake
+    autoconf
+    libtool
+    flex
+    bison
+    texinfo
+  ];
   buildInputs = [ ncurses ];
 
   hardeningDisable = [ "format" ];
 
   patches = [
-    (fetchpatch { # pull request telmich/gpm#42
+    (fetchpatch {
+      # pull request telmich/gpm#42
       url = "https://github.com/kaction/gpm/commit/217b4fe4c9b62298a4e9a54c1f07e3b52b013a09.patch";
       sha256 = "1f74h12iph4z1dldbxk9imcq11805c3ai2xhbsqvx8jpjrcfp19q";
     })
@@ -43,12 +63,12 @@ stdenv.mkDerivation rec {
   configureFlags = [
     "--sysconfdir=/etc"
     "--localstatedir=/var"
-    (if ncurses == null then "--without-curses" else "--with-curses")
+    (if withNcurses then "--with-curses" else "--without-curses")
   ];
 
   enableParallelBuilding = true;
 
-  # Provide libgpm.so for compatability
+  # Provide libgpm.so for compatibility
   postInstall = ''
     ln -sv $out/lib/libgpm.so.2 $out/lib/libgpm.so
   '';
@@ -57,9 +77,9 @@ stdenv.mkDerivation rec {
 
   meta = with lib; {
     homepage = "https://www.nico.schottelius.org/software/gpm/";
-    description = "A daemon that provides mouse support on the Linux console";
-    license = licenses.gpl2;
+    description = "Daemon that provides mouse support on the Linux console";
+    license = licenses.gpl2Plus;
     platforms = platforms.linux ++ platforms.cygwin;
-    maintainers = with maintainers; [ eelco ];
+    maintainers = [ ];
   };
 }

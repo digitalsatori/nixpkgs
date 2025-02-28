@@ -21,10 +21,9 @@ in
     enable = mkOption {
       type = types.bool;
       default = false;
-      description =
-        ''
+      description = ''
           Whether to enable the Router Advertisement Daemon
-          (<command>radvd</command>), which provides link-local
+          ({command}`radvd`), which provides link-local
           advertisements of IPv6 router addresses and prefixes using
           the Neighbor Discovery Protocol (NDP).  This enables
           stateless address autoconfiguration in IPv6 clients on the
@@ -32,13 +31,17 @@ in
         '';
     };
 
-    package = mkOption {
-      type = types.package;
-      default = pkgs.radvd;
-      defaultText = literalExpression "pkgs.radvd";
+    package = mkPackageOption pkgs "radvd" { };
+
+    debugLevel = mkOption {
+      type = types.int;
+      default = 0;
+      example = 5;
       description = ''
-        The RADVD package to use for the RADVD service.
-      '';
+          The debugging level is an integer in the range from 1 to 5,
+          from quiet to very verbose. A debugging level of 0 completely
+          turns off debugging.
+        '';
     };
 
     config = mkOption {
@@ -50,8 +53,7 @@ in
             prefix 2001:db8:1234:5678::/64 { };
           };
         '';
-      description =
-        ''
+      description = ''
           The contents of the radvd configuration file.
         '';
     };
@@ -76,7 +78,7 @@ in
         wantedBy = [ "multi-user.target" ];
         after = [ "network.target" ];
         serviceConfig =
-          { ExecStart = "@${cfg.package}/bin/radvd radvd -n -u radvd -C ${confFile}";
+          { ExecStart = "@${cfg.package}/bin/radvd radvd -n -u radvd -d ${toString cfg.debugLevel} -C ${confFile}";
             Restart = "always";
           };
       };

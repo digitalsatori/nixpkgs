@@ -1,31 +1,36 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, setuptools
-, setuptools-scm
-, cocotb-bus
-, pytestCheckHook
-, swig
-, verilog
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  setuptools-scm,
+  cocotb-bus,
+  find-libpython,
+  pytestCheckHook,
+  swig,
+  iverilog,
+  ghdl,
+  stdenv,
+  fetchpatch,
 }:
 
 buildPythonPackage rec {
   pname = "cocotb";
-  version = "1.6.2";
+  version = "1.9.2";
+  format = "setuptools";
 
-  # - we need to use the tarball from PyPi
-  #   or the full git checkout (with .git)
-  # - using fetchFromGitHub will cause a build failure,
-  #   because it does not include required metadata
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-SY+1727DbWMg6CnmHw8k/VP0dwBRYszn+YyyvZXgvUs=";
+  # pypi source doesn't include tests
+  src = fetchFromGitHub {
+    owner = "cocotb";
+    repo = "cocotb";
+    tag = "v${version}";
+    hash = "sha256-7KCo7g2I1rfm8QDHRm3ZKloHwjDIICnJCF8KhaFdvqY=";
   };
 
   nativeBuildInputs = [ setuptools-scm ];
 
   buildInputs = [ setuptools ];
+  propagatedBuildInputs = [ find-libpython ];
 
   postPatch = ''
     patchShebangs bin/*.py
@@ -40,27 +45,39 @@ buildPythonPackage rec {
 
     # remove circular dependency cocotb-bus from setup.py
     substituteInPlace setup.py --replace "'cocotb-bus<1.0'" ""
-  '' + lib.optionalString stdenv.isDarwin ''
-    # disable lto on darwin
-    # https://github.com/NixOS/nixpkgs/issues/19098
-    substituteInPlace cocotb_build_libs.py --replace "-flto" ""
   '';
 
-  patches = [
-    # Fix "can't link with bundle (MH_BUNDLE) only dylibs (MH_DYLIB) file" error
-    ./0001-Patch-LDCXXSHARED-for-macOS-along-with-LDSHARED.patch
+  disabledTests = [
+    # https://github.com/cocotb/cocotb/commit/425e1edb8e7133f4a891f2f87552aa2748cd8d2c#diff-4df986cbc2b1a3f22172caea94f959d8fcb4a128105979e6e99c68139469960cL33
+    "test_cocotb"
+    "test_cocotb_parallel"
   ];
 
-  checkInputs = [ cocotb-bus pytestCheckHook swig verilog ];
+  nativeCheckInputs = [
+    cocotb-bus
+    pytestCheckHook
+    swig
+    iverilog
+    ghdl
+  ];
 
-  checkPhase = ''
+  preCheck = ''
     export PATH=$out/bin:$PATH
+    mv cocotb cocotb.hidden
   '';
 
-  meta = with lib; {
+  pythonImportsCheck = [ "cocotb" ];
+
+  meta = {
+    changelog = "https://github.com/cocotb/cocotb/releases/tag/v${version}";
     description = "Coroutine based cosimulation library for writing VHDL and Verilog testbenches in Python";
+    mainProgram = "cocotb-config";
     homepage = "https://github.com/cocotb/cocotb";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ matthuszagh ];
+    license = lib.licenses.bsd3;
+    broken = stdenv.hostPlatform.isDarwin;
+    maintainers = with lib.maintainers; [
+      matthuszagh
+      jleightcap
+    ];
   };
 }

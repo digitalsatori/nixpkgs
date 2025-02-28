@@ -1,33 +1,33 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, fetchpatch
-, kernel
-, bc
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  kernel,
+  kernelModuleMakeFlags,
+  bc,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "rtl8821ce";
-  version = "${kernel.version}-unstable-2022-06-01";
+  version = "${kernel.version}-unstable-2025-02-08";
 
   src = fetchFromGitHub {
     owner = "tomaspinho";
     repo = "rtl8821ce";
-    rev = "be733dc86781c68571650b395dd0fa6b53c0a039";
-    sha256 = "sha256-4PgISOjCSSGymz96VwE4jzcUiOEO+Ocuk2kJVIA+TQM=";
+    rev = "46d1a59e37364ed4aedcb09746f0ae412e6b2066";
+    hash = "sha256-vQM7e8tuy4Lf2HvGtHUvOxulF4DIhX33vFel9u9i178=";
   };
 
   hardeningDisable = [ "pic" ];
 
   nativeBuildInputs = [ bc ] ++ kernel.moduleBuildDependencies;
-  makeFlags = kernel.makeFlags;
+  makeFlags = kernelModuleMakeFlags;
 
   prePatch = ''
     substituteInPlace ./Makefile \
-      --replace /lib/modules/ "${kernel.dev}/lib/modules/" \
-      --replace '$(shell uname -r)' "${kernel.modDirVersion}" \
-      --replace /sbin/depmod \# \
-      --replace '$(MODDESTDIR)' "$out/lib/modules/${kernel.modDirVersion}/kernel/net/wireless/"
+      --replace-fail /lib/modules/ "${kernel.dev}/lib/modules/" \
+      --replace-fail /sbin/depmod \# \
+      --replace-fail '$(MODDESTDIR)' "$out/lib/modules/${kernel.modDirVersion}/kernel/net/wireless/"
   '';
 
   preInstall = ''
@@ -36,12 +36,14 @@ stdenv.mkDerivation rec {
 
   enableParallelBuilding = true;
 
-  meta = with lib; {
+  meta = {
     description = "Realtek rtl8821ce driver";
     homepage = "https://github.com/tomaspinho/rtl8821ce";
-    license = licenses.gpl2Only;
-    platforms = platforms.linux;
-    broken = stdenv.isAarch64;
-    maintainers = with maintainers; [ hhm ivar ];
+    license = lib.licenses.gpl2Only;
+    platforms = lib.platforms.linux;
+    maintainers = with lib.maintainers; [ defelo ];
+    broken =
+      stdenv.hostPlatform.isAarch64
+      || ((lib.versions.majorMinor kernel.version) == "5.4" && kernel.isHardened);
   };
-}
+})

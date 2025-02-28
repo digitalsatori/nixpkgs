@@ -1,23 +1,31 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, jsonconversion
-, six
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  cbor2,
+  docopt,
+  fetchFromGitHub,
+  jsonconversion,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
+  six,
+  tabulate,
 }:
 
 buildPythonPackage rec {
   pname = "amazon-ion";
-  version = "0.9.1";
-  format = "setuptools";
+  version = "0.13.0";
+  pyproject = true;
 
   disabled = pythonOlder "3.7";
 
-  src = fetchPypi {
-    pname = "amazon.ion";
-    inherit version;
-    hash = "sha256-Moq1e7LmI0L7DHg6UNYvseEDbqdL23aCwL38wDm3yCA=";
+  src = fetchFromGitHub {
+    owner = "amazon-ion";
+    repo = "ion-python";
+    tag = "v${version}";
+    # Test vectors require git submodule
+    fetchSubmodules = true;
+    hash = "sha256-ZnslVmXE2YvTAkpfw2lbpB+uF85n/CvA22htO/Y7yWk=";
   };
 
   postPatch = ''
@@ -25,22 +33,36 @@ buildPythonPackage rec {
       --replace "'pytest-runner'," ""
   '';
 
+  nativeBuildInputs = [ setuptools ];
+
   propagatedBuildInputs = [
     jsonconversion
     six
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    cbor2
+    docopt
     pytestCheckHook
+    tabulate
   ];
 
-  pythonImportsCheck = [
-    "amazon.ion"
+  disabledTests = [
+    # ValueError: Exceeds the limit (4300) for integer string conversion
+    "test_roundtrips"
   ];
+
+  disabledTestPaths = [
+    # Exclude benchmarks
+    "tests/test_benchmark_cli.py"
+  ];
+
+  pythonImportsCheck = [ "amazon.ion" ];
 
   meta = with lib; {
     description = "Python implementation of Amazon Ion";
-    homepage = "https://github.com/amzn/ion-python";
+    homepage = "https://github.com/amazon-ion/ion-python";
+    changelog = "https://github.com/amazon-ion/ion-python/releases/tag/${src.tag}";
     sourceProvenance = with sourceTypes; [
       fromSource
       binaryNativeCode

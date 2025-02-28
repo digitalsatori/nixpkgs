@@ -1,10 +1,17 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
-let cfg = config.services.phylactery;
-in {
+let
+  cfg = config.services.phylactery;
+in
+{
   options.services.phylactery = {
-    enable = mkEnableOption "Whether to enable Phylactery server";
+    enable = mkEnableOption "Phylactery server";
 
     host = mkOption {
       type = types.str;
@@ -22,12 +29,7 @@ in {
       description = "Path to CBZ library";
     };
 
-    package = mkOption {
-      type = types.package;
-      default = pkgs.phylactery;
-      defaultText = literalExpression "pkgs.phylactery";
-      description = "The Phylactery package to use";
-    };
+    package = mkPackageOption pkgs "phylactery" { };
   };
 
   config = mkIf cfg.enable {

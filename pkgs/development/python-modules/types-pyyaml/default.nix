@@ -1,25 +1,27 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "types-pyyaml";
-  version = "6.0.8";
-  format = "setuptools";
+  version = "6.0.12.20241230";
+  pyproject = true;
 
   src = fetchPypi {
-    pname = "types-PyYAML";
+    pname = "types_pyyaml";
     inherit version;
-    sha256 = "0f349hmw597f2gcja445fsrlnfzb0dj7fy62g8wcbydlgcvmsjfr";
+    hash = "sha256-fwdiLb00u5yLJk/oYKF+DvytANULXyfpOYSQnZNjSYw=";
   };
+
+  build-system = [ setuptools ];
 
   # Module doesn't have tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "yaml-stubs"
-  ];
+  pythonImportsCheck = [ "yaml-stubs" ];
 
   meta = with lib; {
     description = "Typing stubs for PyYAML";

@@ -6,30 +6,31 @@
 , nettle
 , pkg-config
 , libiconv
+, libxcrypt
 , ApplicationServices
 }:
 
 stdenv.mkDerivation rec {
   pname = "libfilezilla";
-  version = "0.37.2";
+  version = "0.47.0";
 
   src = fetchurl {
-    url = "https://download.filezilla-project.org/${pname}/${pname}-${version}.tar.bz2";
-    hash = "sha256-5RFA7mNka6kq5Blpwfv/JZRtxFJBDTxNr5HNeSv+4tU=";
+    url = "https://download.filezilla-project.org/${pname}/${pname}-${version}.tar.xz";
+    hash = "sha256-YYpYa2E773EKYzxCv92mFmbLsPyKkq1JA2HQvJHFg0E=";
   };
 
   nativeBuildInputs = [ autoreconfHook pkg-config ];
 
-  buildInputs = [ gettext gnutls nettle ]
-    ++ lib.optionals stdenv.isDarwin [ libiconv ApplicationServices ];
+  buildInputs = [ gettext gnutls nettle libxcrypt ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [ libiconv ApplicationServices ];
 
   enableParallelBuilding = true;
 
   meta = with lib; {
     homepage = "https://lib.filezilla-project.org/";
-    description = "A modern C++ library, offering some basic functionality to build high-performing, platform-independent programs";
+    description = "Modern C++ library, offering some basic functionality to build high-performing, platform-independent programs";
     license = licenses.gpl2Plus;
     maintainers = with maintainers; [ pSub ];
-    platforms = platforms.unix;
+    platforms = lib.platforms.unix;
   };
 }

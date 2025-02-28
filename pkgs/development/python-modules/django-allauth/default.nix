@@ -1,54 +1,109 @@
-{ lib
-, buildPythonPackage
-, django
-, fetchFromGitHub
-, python3-openid
-, pythonOlder
-, requests
-, requests-oauthlib
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+  python,
+
+  # build-system
+  setuptools,
+
+  # build-time dependencies
+  gettext,
+
+  # dependencies
+  asgiref,
+  django,
+
+  # optional-dependencies
+  fido2,
+  python3-openid,
+  python3-saml,
+  requests,
+  requests-oauthlib,
+  pyjwt,
+  qrcode,
+
+  # tests
+  pillow,
+  pytestCheckHook,
+  pytest-asyncio,
+  pytest-django,
+
+  # passthru tests
+  dj-rest-auth,
 }:
 
 buildPythonPackage rec {
   pname = "django-allauth";
-  version = "0.51.0";
-  format = "setuptools";
+  version = "65.3.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "pennersr";
-    repo = pname;
-    rev = version;
-    hash = "sha256-o8EoayMMwxoJTrUA3Jo1Dfu1XFgC+Mcpa8yMwXlKAKY=";
+    repo = "django-allauth";
+    tag = version;
+    hash = "sha256-IgadrtOQt3oY2U/+JWBs5v97aaWz5oinz5QUdGXBqO4=";
   };
 
-  postPatch = ''
-    chmod +x manage.py
-    patchShebangs manage.py
-  '';
+  nativeBuildInputs = [
+    gettext
+  ];
 
-  propagatedBuildInputs = [
+  build-system = [
+    setuptools
+  ];
+
+  dependencies = [
+    asgiref
     django
-    python3-openid
-    requests
-    requests-oauthlib
   ];
 
-  checkPhase = ''
-    # test is out of date
-    rm allauth/socialaccount/providers/cern/tests.py
-
-    ./manage.py test
+  preBuild = ''
+    ${python.interpreter} -m django compilemessages
   '';
 
-  pythonImportsCheck = [
-    "allauth"
+  optional-dependencies = {
+    mfa = [
+      fido2
+      qrcode
+    ];
+    openid = [ python3-openid ];
+    saml = [ python3-saml ];
+    socialaccount = [
+      requests
+      requests-oauthlib
+      pyjwt
+    ] ++ pyjwt.optional-dependencies.crypto;
+    steam = [ python3-openid ];
+  };
+
+  pythonImportsCheck = [ "allauth" ];
+
+  nativeCheckInputs = [
+    pillow
+    pytestCheckHook
+    pytest-asyncio
+    pytest-django
+  ] ++ lib.flatten (builtins.attrValues optional-dependencies);
+
+  disabledTests = [
+    # Tests require network access
+    "test_login"
   ];
+
+  passthru.tests = {
+    inherit dj-rest-auth;
+  };
 
   meta = with lib; {
+    changelog = "https://github.com/pennersr/django-allauth/blob/${version}/ChangeLog.rst";
     description = "Integrated set of Django applications addressing authentication, registration, account management as well as 3rd party (social) account authentication";
+    downloadPage = "https://github.com/pennersr/django-allauth";
     homepage = "https://www.intenct.nl/projects/django-allauth";
     license = licenses.mit;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    maintainers = with maintainers; [ derdennisop ];
   };
 }

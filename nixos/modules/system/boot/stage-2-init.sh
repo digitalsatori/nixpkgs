@@ -19,7 +19,7 @@ if [ "${IN_NIXOS_SYSTEMD_STAGE1:-}" != true ]; then
 
     # Print a greeting.
     echo
-    echo -e "\e[1;32m<<< NixOS Stage 2 >>>\e[0m"
+    echo -e "\e[1;32m<<< @distroName@ Stage 2 >>>\e[0m"
     echo
 
 
@@ -54,7 +54,7 @@ if [ ! -e /proc/1 ]; then
 fi
 
 
-if [ "${IN_NIXOS_SYSTEMD_STAGE1:-}" = true ]; then
+if [ "${IN_NIXOS_SYSTEMD_STAGE1:-}" = true ] || [ ! -c /dev/kmsg ] ; then
     echo "booting system configuration ${systemConfig}"
 else
     echo "booting system configuration $systemConfig" > /dev/kmsg
@@ -68,8 +68,9 @@ fi
 # like squashfs.
 chown -f 0:30000 /nix/store
 chmod -f 1775 /nix/store
-if [ -n "@readOnlyStore@" ]; then
-    if ! [[ "$(findmnt --noheadings --output OPTIONS /nix/store)" =~ ro(,|$) ]]; then
+if [ -n "@readOnlyNixStore@" ]; then
+    # #375257: Ensure that we pick the "top" (i.e. last) mount so we don't get a false positive for a lower mount.
+    if ! [[ "$(findmnt --direction backward --first-only --noheadings --output OPTIONS /nix/store)" =~ (^|,)ro(,|$) ]]; then
         if [ -z "$container" ]; then
             mount --bind /nix/store /nix/store
         else
@@ -104,7 +105,10 @@ fi
 
 
 # Required by the activation script
-install -m 0755 -d /etc /etc/nixos
+install -m 0755 -d /etc
+if [ ! -h "/etc/nixos" ]; then
+    install -m 0755 -d /etc/nixos
+fi
 install -m 01777 -d /tmp
 
 
@@ -120,14 +124,6 @@ ln -sfn "$systemConfig" /run/booted-system
 
 # Run any user-specified commands.
 @shell@ @postBootCommands@
-
-
-# Ensure systemd doesn't try to populate /etc, by forcing its first-boot
-# heuristic off. It doesn't matter what's in /etc/machine-id for this purpose,
-# and systemd will immediately fill in the file when it starts, so just
-# creating it is enough. This `: >>` pattern avoids forking and avoids changing
-# the mtime if the file already exists.
-: >> /etc/machine-id
 
 
 # No need to restore the stdout/stderr streams we never redirected and

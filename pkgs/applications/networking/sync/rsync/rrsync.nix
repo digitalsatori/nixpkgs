@@ -1,11 +1,17 @@
-{ lib, stdenv, fetchurl, perl, rsync, fetchpatch }:
+{
+  stdenv,
+  python3,
+  rsync,
+}:
 
 stdenv.mkDerivation {
   pname = "rrsync";
-  inherit (rsync) version srcs;
+  inherit (rsync) version src;
 
-  buildInputs = [ rsync perl ];
-
+  buildInputs = [
+    rsync
+    (python3.withPackages (pythonPackages: with pythonPackages; [ braceexpand ]))
+  ];
   # Skip configure and build phases.
   # We just want something from the support directory
   dontConfigure = true;
@@ -24,6 +30,7 @@ stdenv.mkDerivation {
   '';
 
   meta = rsync.meta // {
-    description = "A helper to run rsync-only environments from ssh-logins";
+    description = "Helper to run rsync-only environments from ssh-logins";
+    mainProgram = "rrsync";
   };
 }

@@ -1,12 +1,18 @@
-{ lib, buildKodiAddon, fetchzip, addonUpdateScript }:
+{
+  lib,
+  rel,
+  buildKodiAddon,
+  fetchzip,
+  addonUpdateScript,
+}:
 buildKodiAddon rec {
   pname = "idna";
   namespace = "script.module.idna";
-  version = "3.3.0+matrix.1";
+  version = "3.10.0";
 
   src = fetchzip {
-    url = "https://mirrors.kodi.tv/addons/matrix/${namespace}/${namespace}-${version}.zip";
-    sha256 = "gXW1BvM3CLKshVPaemjmzEoZekU0QjuxJY9zGbGwK18=";
+    url = "https://mirrors.kodi.tv/addons/${lib.toLower rel}/${namespace}/${namespace}-${version}.zip";
+    sha256 = "sha256-wFS7rETO+VGeg1MxMEdb/cwVw5/TEoZF2CS3BjkxDlk=";
   };
 
   passthru = {

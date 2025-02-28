@@ -1,13 +1,11 @@
 { lib
 , stdenv
 , fetchurl
-, substituteAll
-, intltool
+, replaceVars
+, gettext
 , pkg-config
-, fetchpatch
 , dbus
-, gnome
-, systemd
+, gitUpdater
 , libuuid
 , polkit
 , gnutls
@@ -24,16 +22,18 @@
 , libselinux
 , audit
 , gobject-introspection
+, perl
 , modemmanager
 , openresolv
 , libndp
 , newt
-, libsoup
+, libsoup_2_4
 , ethtool
 , gnused
 , iputils
 , kmod
 , jansson
+, elfutils
 , gtk-doc
 , libxslt
 , docbook_xsl
@@ -43,22 +43,28 @@
 , openconnect
 , curl
 , meson
+, mesonEmulatorHook
 , ninja
 , libpsl
 , mobile-broadband-provider-info
 , runtimeShell
+, buildPackages
+, nixosTests
+, systemd
+, udev
+, withSystemd ? lib.meta.availableOn stdenv.hostPlatform systemd
 }:
 
 let
-  pythonForDocs = python3.withPackages (pkgs: with pkgs; [ pygobject3 ]);
+  pythonForDocs = python3.pythonOnBuildForHost.withPackages (pkgs: with pkgs; [ pygobject3 ]);
 in
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "networkmanager";
-  version = "1.38.2";
+  version = "1.50.2";
 
   src = fetchurl {
-    url = "mirror://gnome/sources/NetworkManager/${lib.versions.majorMinor version}/NetworkManager-${version}.tar.xz";
-    sha256 = "sha256-nP/SrcaGUTFt8tL4oJ4XF7sdDC6jic/HIaAQnbmzWCY=";
+    url = "https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/releases/${finalAttrs.version}/downloads/NetworkManager-${finalAttrs.version}.tar.xz";
+    hash = "sha256-EEc76dOrifiiemi3v1vJVXhRpRg7dLYkHl4PpcaSH+8=";
   };
 
   outputs = [ "out" "dev" "devdoc" "man" "doc" ];
@@ -70,14 +76,17 @@ stdenv.mkDerivation rec {
     # System paths
     "--sysconfdir=/etc"
     "--localstatedir=/var"
-    "-Dsystemdsystemunitdir=${placeholder "out"}/etc/systemd/system"
+    (lib.mesonOption "systemdsystemunitdir"
+      (if withSystemd then "${placeholder "out"}/etc/systemd/system" else "no"))
     # to enable link-local connections
     "-Dudev_dir=${placeholder "out"}/lib/udev"
     "-Ddbus_conf_dir=${placeholder "out"}/share/dbus-1/system.d"
     "-Dkernel_firmware_dir=/run/current-system/firmware"
 
     # Platform
-    "-Dsession_tracking=systemd"
+    "-Dmodprobe=${kmod}/bin/modprobe"
+    (lib.mesonOption "session_tracking" (if withSystemd then "systemd" else "no"))
+    (lib.mesonBool "systemd_journal" withSystemd)
     "-Dlibaudit=yes-disabled-by-default"
     "-Dpolkit_agent_helper_1=/run/wrappers/bin/polkit-agent-helper-1"
 
@@ -96,49 +105,35 @@ stdenv.mkDerivation rec {
     "-Dresolvconf=${openresolv}/bin/resolvconf"
 
     # DHCP clients
-    # ISC DHCP client has reached it's end of life, so stop using it
-    "-Ddhclient=no"
     "-Ddhcpcd=${dhcpcd}/bin/dhcpcd"
     "-Ddhcpcanon=no"
 
     # Miscellaneous
-    "-Ddocs=true"
+    # almost cross-compiles, however fails with
+    # ** (process:9234): WARNING **: Failed to load shared library '/nix/store/...-networkmanager-aarch64-unknown-linux-gnu-1.38.2/lib/libnm.so.0' referenced by the typelib: /nix/store/...-networkmanager-aarch64-unknown-linux-gnu-1.38.2/lib/libnm.so.0: cannot open shared object file: No such file or directory
+    "-Ddocs=${lib.boolToString (stdenv.buildPlatform == stdenv.hostPlatform)}"
     # We don't use firewalld in NixOS
     "-Dfirewalld_zone=false"
     "-Dtests=no"
     "-Dcrypto=gnutls"
+    "-Dmobile_broadband_provider_info_database=${mobile-broadband-provider-info}/share/mobile-broadband-provider-info/serviceproviders.xml"
   ];
 
   patches = [
-    (substituteAll {
-      src = ./fix-paths.patch;
-      inherit iputils kmod openconnect ethtool gnused systemd;
+    (replaceVars ./fix-paths.patch {
+      inherit iputils openconnect ethtool gnused;
       inherit runtimeShell;
+      # patch context
+      OUTPUT = null;
     })
 
     # Meson does not support using different directories during build and
     # for installation like Autotools did with flags passed to make install.
     ./fix-install-paths.patch
-
-    (fetchpatch {
-      # Prevent downgrade to plain network on Enhanced Open profiles
-      url = "https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/commit/b7946e50acc0d20d31b0c1098fdadc2f105ba799.patch";
-      hash = "sha256-CdZiubfqhJQ5w4+s9O8C5WI9Ls/paONzDX4rX6yEmS0=";
-    })
-    (fetchpatch {
-      # Treat OWE BSSIDs as valid candidates for open profiles
-      url = "https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/commit/dd80cdcc1bd5e2535b8e4a1d1d0c62f1d3328a7c.patch";
-      hash = "sha256-QMZvWN3g8K+UH6y05+RkCmF+gHHU4pB+UXfU770AUis=";
-    })
-    (fetchpatch {
-      # Allow distinguishing pure OWE networks from those with transition mode enabled
-      url = "https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/commit/13ea8d2e7dddd8279c82230594cea533ca349dd3.patch";
-      hash = "sha256-BiINGzX/Zp8pwdbMiDScrZvrHtH7coXkZm1HScFuFWA=";
-    })
   ];
 
   buildInputs = [
-    systemd
+    (if withSystemd then systemd else udev)
     libselinux
     audit
     libpsl
@@ -150,12 +145,12 @@ stdenv.mkDerivation rec {
     mobile-broadband-provider-info
     bluez5
     dnsmasq
-    gobject-introspection
     modemmanager
     readline
     newt
-    libsoup
+    libsoup_2_4
     jansson
+    dbus # used to get directory paths with pkg-config during configuration
   ];
 
   propagatedBuildInputs = [ gnutls libgcrypt ];
@@ -163,11 +158,12 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [
     meson
     ninja
-    intltool
+    gettext
     pkg-config
     vala
     gobject-introspection
-    dbus
+    perl
+    elfutils # used to find jansson soname
     # Docs
     gtk-doc
     libxslt
@@ -176,6 +172,8 @@ stdenv.mkDerivation rec {
     docbook_xml_dtd_42
     docbook_xml_dtd_43
     pythonForDocs
+  ] ++ lib.optionals (!stdenv.buildPlatform.canExecute stdenv.hostPlatform) [
+    mesonEmulatorHook
   ];
 
   doCheck = false; # requires /sys, the net
@@ -183,6 +181,13 @@ stdenv.mkDerivation rec {
   postPatch = ''
     patchShebangs ./tools
     patchShebangs libnm/generate-setting-docs.py
+
+    # TODO: submit upstream
+    substituteInPlace meson.build \
+      --replace "'vala', req" "'vala', native: false, req"
+  '' + lib.optionalString withSystemd ''
+    substituteInPlace data/NetworkManager.service.in \
+      --replace-fail /usr/bin/busctl ${systemd}/bin/busctl
   '';
 
   preBuild = ''
@@ -194,20 +199,31 @@ stdenv.mkDerivation rec {
     ln -s $PWD/src/libnm-client-impl/libnm.so.0 ${placeholder "out"}/lib/libnm.so.0
   '';
 
+  postFixup = lib.optionalString (stdenv.buildPlatform != stdenv.hostPlatform) ''
+    cp -r ${buildPackages.networkmanager.devdoc} $devdoc
+    cp -r ${buildPackages.networkmanager.man} $man
+  '';
+
   passthru = {
-    updateScript = gnome.updateScript {
-      packageName = "NetworkManager";
-      attrPath = "networkmanager";
-      versionPolicy = "odd-unstable";
+    updateScript = gitUpdater {
+      odd-unstable = true;
+      url = "https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git";
+    };
+    tests = {
+      inherit (nixosTests.networking) networkmanager;
     };
   };
 
   meta = with lib; {
-    homepage = "https://wiki.gnome.org/Projects/NetworkManager";
+    homepage = "https://networkmanager.dev";
     description = "Network configuration and management tool";
     license = licenses.gpl2Plus;
     changelog = "https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/raw/${version}/NEWS";
-    maintainers = teams.freedesktop.members ++ (with maintainers; [ domenkozar obadz maxeaubrey ]);
+    maintainers = teams.freedesktop.members ++ (with maintainers; [ domenkozar obadz ]);
     platforms = platforms.linux;
+    badPlatforms = [
+      # Mandatory shared libraries.
+      lib.systems.inspect.platformPatterns.isStatic
+    ];
   };
-}
+})

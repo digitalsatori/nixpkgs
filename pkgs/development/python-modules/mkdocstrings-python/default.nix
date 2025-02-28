@@ -1,54 +1,60 @@
-{ lib
-, buildPythonApplication
-, fetchFromGitHub
-, griffe
-, mkdocs-material
-, mkdocstrings
-, pdm-pep517
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  beautifulsoup4,
+  buildPythonPackage,
+  fetchFromGitHub,
+  griffe,
+  inline-snapshot,
+  mkdocs-autorefs,
+  mkdocs-material,
+  mkdocstrings,
+  pdm-backend,
+  pytestCheckHook,
+  pythonOlder,
 }:
 
-buildPythonApplication rec {
+buildPythonPackage rec {
   pname = "mkdocstrings-python";
-  version = "0.7.1";
-  format = "pyproject";
+  version = "1.13.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "mkdocstrings";
     repo = "python";
-    rev = version;
-    hash = "sha256-cZk6Eu6Jp3tSPAb0HplR/I0pX2YIFhOaAsI3YRS0LVw=";
+    tag = version;
+    hash = "sha256-NgVCKV3AWk4pRT7/+6YGXmKSZETL4ZOWDWGeb/qjdng=";
   };
 
-  nativeBuildInputs = [
-    pdm-pep517
-  ];
+  build-system = [ pdm-backend ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     griffe
+    mkdocs-autorefs
     mkdocstrings
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    beautifulsoup4
+    inline-snapshot
     mkdocs-material
     pytestCheckHook
   ];
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'dynamic = ["version"]' 'version = "${version}"'
-  '';
+  pythonImportsCheck = [ "mkdocstrings_handlers" ];
 
-  pythonImportsCheck = [
-    "mkdocstrings_handlers"
+  disabledTests = [
+    # Tests fails with AssertionError
+    "test_windows_root_conversion"
+    # TypeError
+    "test_format_code"
   ];
 
   meta = with lib; {
     description = "Python handler for mkdocstrings";
     homepage = "https://github.com/mkdocstrings/python";
+    changelog = "https://github.com/mkdocstrings/python/blob/${version}/CHANGELOG.md";
     license = licenses.isc;
     maintainers = with maintainers; [ fab ];
   };

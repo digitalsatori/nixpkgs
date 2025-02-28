@@ -60,11 +60,11 @@ in
       VertRefresh 1.0 - 200.0
       #To add your own modes here, use a modeline calculator, like:
       # cvt:
-      # http://www.x.org/archive/X11R7.5/doc/man/man1/cvt.1.html
+      # https://www.x.org/archive/X11R7.5/doc/man/man1/cvt.1.html
       # xtiming:
-      # http://xtiming.sourceforge.net/cgi-bin/xtiming.pl
+      # https://xtiming.sourceforge.net/cgi-bin/xtiming.pl
       # gtf:
-      # http://gtf.sourceforge.net/
+      # https://gtf.sourceforge.net/
       #This can be used to get a specific DPI, but only for the default resolution:
       #DisplaySize 508 317
       #NOTE: the highest modes will not work without increasing the VideoRam
@@ -226,7 +226,7 @@ in
       VideoRam 192000
     '';
 
-    services.xserver.displayManager.job.execCmd = ''
+    services.displayManager.execCmd = ''
       ${optionalString (cfg.pulseaudio)
         "export PULSE_COOKIE=/run/pulse/.config/pulse/cookie"}
       exec ${pkgs.xpra}/bin/xpra ${if cfg.desktop == null then "start" else "start-desktop --start=${cfg.desktop}"} \
@@ -251,9 +251,8 @@ in
 
     environment.systemPackages = [pkgs.xpra];
 
-    virtualisation.virtualbox.guest.x11 = false;
-    hardware.pulseaudio.enable = mkDefault cfg.pulseaudio;
-    hardware.pulseaudio.systemWide = mkDefault cfg.pulseaudio;
+    services.pulseaudio.enable = mkDefault cfg.pulseaudio;
+    services.pulseaudio.systemWide = mkDefault cfg.pulseaudio;
   };
 
 }

@@ -1,60 +1,66 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, flit-core
-, click
-, docutils
-, jinja2
-, jsonschema
-, linkify-it-py
-, myst-nb
-, pyyaml
-, sphinx
-, sphinx-comments
-, sphinx-copybutton
-, sphinx-external-toc
-, sphinx-jupyterbook-latex
-, sphinx-design
-, sphinx-thebe
-, sphinx-book-theme
-, sphinx-togglebutton
-, sphinxcontrib-bibtex
-, sphinx-multitoc-numbering
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+
+  # build-system
+  flit-core,
+
+  # dependencies
+  click,
+  jinja2,
+  jsonschema,
+  linkify-it-py,
+  myst-nb,
+  myst-parser,
+  pyyaml,
+  sphinx,
+  sphinx-comments,
+  sphinx-copybutton,
+  sphinx-external-toc,
+  sphinx-jupyterbook-latex,
+  sphinx-design,
+  sphinx-thebe,
+  sphinx-book-theme,
+  sphinx-togglebutton,
+  sphinxcontrib-bibtex,
+  sphinx-multitoc-numbering,
+
+  # tests
+  jupytext,
+  pytest-regressions,
+  pytest-xdist,
+  pytestCheckHook,
+  sphinx-inline-tabs,
+  texsoup,
 }:
 
 buildPythonPackage rec {
   pname = "jupyter-book";
-  version = "0.13.0";
+  version = "1.0.3";
+  pyproject = true;
 
-  format = "flit";
+  disabled = pythonOlder "3.9";
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "0a956677e7bbee630dd66641c09a84091277887d6dcdd381a676f00fa9de2074";
+  src = fetchFromGitHub {
+    owner = "jupyter-book";
+    repo = "jupyter-book";
+    tag = "v${version}";
+    hash = "sha256-MBSf2/+4+efWHJ530jdezeh5OLTtUZlAEOl5SqoWOuE=";
   };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace "jsonschema<4" "jsonschema" \
-      --replace "sphinx-external-toc~=0.2.3" "sphinx-external-toc" \
-      --replace "myst-nb~=0.13.1" "myst-nb" \
-      --replace "docutils>=0.15,<0.18" "docutils" \
-      --replace "sphinx-design~=0.1.0" "sphinx-design" \
-      --replace "linkify-it-py~=1.0.1" "linkify-it-py"
-  '';
+  build-system = [ flit-core ];
 
-  nativeBuildInputs = [ flit-core ];
+  pythonRelaxDeps = [ "myst-parser" ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     click
-    docutils
     jinja2
     jsonschema
     linkify-it-py
     myst-nb
+    myst-parser
     pyyaml
     sphinx
     sphinx-comments
@@ -69,12 +75,53 @@ buildPythonPackage rec {
     sphinx-multitoc-numbering
   ];
 
-  pythonImportsCheck = [ "jupyter_book" ];
+  pythonImportsCheck = [
+    "jupyter_book"
+    "jupyter_book.cli.main"
+  ];
 
-  meta = with lib; {
+  nativeCheckInputs = [
+    jupytext
+    pytest-regressions
+    pytest-xdist
+    pytestCheckHook
+    sphinx-inline-tabs
+    texsoup
+  ];
+
+  preCheck = ''
+    export HOME=$TMPDIR
+  '';
+
+  disabledTests = [
+    # touch the network
+    "test_create_from_cookiecutter"
+    # flaky?
+    "test_execution_timeout"
+    # require texlive
+    "test_toc"
+    "test_toc_latex_parts"
+    "test_toc_latex_urllink"
+    # WARNING: Executing notebook failed: CellExecutionError [mystnb.exec]
+    "test_build_dirhtml_from_template"
+    "test_build_from_template"
+    "test_build_page"
+    "test_build_singlehtml_from_template"
+  ];
+
+  disabledTestPaths = [
+    # require texlive
+    "tests/test_pdf.py"
+  ];
+
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
     description = "Build a book with Jupyter Notebooks and Sphinx";
-    homepage = "https://executablebooks.org/";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ marsam ];
+    homepage = "https://jupyterbook.org/";
+    changelog = "https://github.com/jupyter-book/jupyter-book/blob/${src.rev}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    maintainers = lib.teams.jupyter.members;
+    mainProgram = "jupyter-book";
   };
 }

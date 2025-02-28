@@ -1,50 +1,63 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, click
-, mock
-, pytestCheckHook
-, google-auth
-, requests-oauthlib
-, pythonOlder
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  google-auth,
+  requests-oauthlib,
+  click,
+  mock,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "google-auth-oauthlib";
-  version = "0.5.1";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "1.2.1";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-MFlrgk/GgI/ayi8EjkmYzED7SzWZ6upm0o3HCFs2xbg=";
+    pname = "google_auth_oauthlib";
+    inherit version;
+    hash = "sha256-r9DK0JKi6qU82OgphVfW3hA0xstKdAUAtTV7ZIr5cmM=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     google-auth
     requests-oauthlib
   ];
 
-  checkInputs = [
-    click
+  optional-dependencies = {
+    tool = [ click ];
+  };
+
+  nativeCheckInputs = [
     mock
     pytestCheckHook
-  ];
+  ] ++ optional-dependencies.tool;
 
-  disabledTests = lib.optionals stdenv.isDarwin [
-    "test_run_local_server"
-  ];
+  disabledTests =
+    [
+      # Flaky test. See https://github.com/NixOS/nixpkgs/issues/288424#issuecomment-1941609973.
+      "test_run_local_server_occupied_port"
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      # This test fails if the hostname is not associated with an IP (e.g., in `/etc/hosts`).
+      "test_run_local_server_bind_addr"
+    ];
 
-  pythonImportsCheck = [
-    "google_auth_oauthlib"
-  ];
+  pythonImportsCheck = [ "google_auth_oauthlib" ];
 
-  meta = with lib; {
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
     description = "Google Authentication Library: oauthlib integration";
     homepage = "https://github.com/GoogleCloudPlatform/google-auth-library-python-oauthlib";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 terlar ];
+    changelog = "https://github.com/googleapis/google-auth-library-python-oauthlib/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ terlar ];
+    mainProgram = "google-oauthlib-tool";
   };
 }

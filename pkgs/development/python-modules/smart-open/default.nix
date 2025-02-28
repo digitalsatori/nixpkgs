@@ -1,54 +1,75 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, azure-common
-, azure-core
-, azure-storage-blob
-, boto3
-, google-cloud-storage
-, requests
-, moto
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  pythonOlder,
+  fetchFromGitHub,
+  azure-common,
+  azure-core,
+  azure-storage-blob,
+  boto3,
+  google-cloud-storage,
+  requests,
+  moto,
+  paramiko,
+  pytestCheckHook,
+  responses,
+  setuptools,
+  wrapt,
+  zstandard,
 }:
 
 buildPythonPackage rec {
   pname = "smart-open";
-  version = "6.0.0";
-  format = "setuptools";
+  version = "7.1.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "RaRe-Technologies";
     repo = "smart_open";
-    rev = "v${version}";
-    sha256 = "sha256-FEIJ1DBW0mz7n+J03C1Lg8uAs2ZxI0giM7+mvuNPyGg=";
+    tag = "v${version}";
+    hash = "sha256-ANbM0bKmkK25WCKxV7KHlPjzfTAY7dP67mmahRwtXI8=";
   };
 
-  propagatedBuildInputs = [
-    azure-common
-    azure-core
-    azure-storage-blob
-    boto3
-    google-cloud-storage
-    requests
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  dependencies = [ wrapt ];
+
+  optional-dependencies = {
+    s3 = [ boto3 ];
+    gcs = [ google-cloud-storage ];
+    azure = [
+      azure-storage-blob
+      azure-common
+      azure-core
+    ];
+    http = [ requests ];
+    webhdfs = [ requests ];
+    ssh = [ paramiko ];
+    zst = [ zstandard ];
+  };
+
+  pythonImportsCheck = [ "smart_open" ];
+
+  nativeCheckInputs = [
     moto
     pytestCheckHook
-  ];
+    responses
+  ] ++ lib.flatten (lib.attrValues optional-dependencies);
 
-  pytestFlagsArray = [
-    "smart_open"
-  ];
+  pytestFlagsArray = [ "smart_open" ];
 
-  pythonImportsCheck = [
-    "smart_open"
+  disabledTests = [
+    # https://github.com/RaRe-Technologies/smart_open/issues/784
+    "test_https_seek_forward"
+    "test_seek_from_current"
+    "test_seek_from_end"
+    "test_seek_from_start"
   ];
 
   meta = with lib; {
+    changelog = "https://github.com/piskvorky/smart_open/releases/tag/${src.tag}";
     description = "Library for efficient streaming of very large file";
     homepage = "https://github.com/RaRe-Technologies/smart_open";
     license = licenses.mit;

@@ -6,8 +6,19 @@ let
 
   cfg = config.services.squid;
 
+  configWriter =
+    if cfg.validateConfig then
+      (
+        content:
+        pkgs.writers.makeScriptWriter {
+          check = "${cfg.package}/bin/squid -k parse -f";
+          interpreter = "${cfg.package}/bin/squid";
+        } "squid.conf" content
+      )
+    else
+      (content: pkgs.writeText "squid.conf" content);
 
-  squidConfig = pkgs.writeText "squid.conf"
+  squidConfig = configWriter
     (if cfg.configText != null then cfg.configText else
     ''
     #
@@ -111,12 +122,13 @@ in
         description = "Whether to run squid web proxy.";
       };
 
-      package = mkOption {
-        default = pkgs.squid;
-        defaultText = literalExpression "pkgs.squid";
-        type = types.package;
-        description = "Squid package to use.";
+      validateConfig = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Validate config syntax.";
       };
+
+      package = mkPackageOption pkgs "squid" { };
 
       proxyAddress = mkOption {
         type = types.nullOr types.str;
@@ -176,7 +188,7 @@ in
       serviceConfig = {
         PIDFile="/run/squid.pid";
         ExecStart  = "${cfg.package}/bin/squid --foreground -YCs -f ${squidConfig}";
-        ExecReload="kill -HUP $MAINPID";
+        ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
         KillMode="mixed";
         NotifyAccess="all";
       };

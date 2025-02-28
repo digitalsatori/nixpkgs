@@ -1,43 +1,44 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, msrest
-, azure-common
-, azure-core
-, msrestazure
-, pythonOlder
+{
+  lib,
+  azure-common,
+  azure-core,
+  buildPythonPackage,
+  fetchPypi,
+  isodate,
+  pythonOlder,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "azure-eventgrid";
-  version = "4.8.0";
-  format = "setuptools";
+  version = "4.21.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
-    inherit pname version;
-    extension = "zip";
-    hash = "sha256-8jEtTQTUJLSa2iuA/Sgirgcm8kbwWOT11O1n46CLouw=";
+    pname = "azure_eventgrid";
+    inherit version;
+    hash = "sha256-HE1/HPqaJrMVjPrlZn7lmd8wvXZ6Kq9k/CMfdBlTzgE=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     azure-common
     azure-core
-    msrest
-    msrestazure
+    isodate
   ];
 
-  # has no tests
+  # Module has no tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "azure.eventgrid"
-  ];
+  pythonImportsCheck = [ "azure.eventgrid" ];
 
   meta = with lib; {
-    description = "A fully-managed intelligent event routing service that allows for uniform event consumption using a publish-subscribe model";
-    homepage = "https://github.com/Azure/azure-sdk-for-python";
+    description = "Fully-managed intelligent event routing service that allows for uniform event consumption using a publish-subscribe model";
+    homepage = "https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/eventgrid/azure-eventgrid";
+    changelog = "https://github.com/Azure/azure-sdk-for-python/blob/azure-eventgrid_${version}/sdk/eventgrid/azure-eventgrid/CHANGELOG.md";
     license = licenses.mit;
     maintainers = with maintainers; [ maxwilson ];
   };

@@ -1,26 +1,27 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, attrs
-, flake8
-, pytestCheckHook
-, pythonOlder
-, hypothesis
-, hypothesmith
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  attrs,
+  flake8,
+  pytestCheckHook,
+  pythonOlder,
+  hypothesis,
+  hypothesmith,
 }:
 
 buildPythonPackage rec {
   pname = "flake8-bugbear";
-  version = "22.7.1";
+  version = "24.12.12";
   format = "setuptools";
 
-  disabled = pythonOlder "3.6";
+  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "PyCQA";
     repo = pname;
-    rev = "refs/tags/${version}";
-    hash = "sha256-eG/1BENY93j76ZFlcnariDFkK9yspqgNUxFPdAhBCVA=";
+    tag = version;
+    hash = "sha256-ZMIpQUF+aXiq2NG0v19UwhWszrW/l50aJmG4YDV0+Wg=";
   };
 
   propagatedBuildInputs = [
@@ -28,7 +29,7 @@ buildPythonPackage rec {
     flake8
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     flake8
     pytestCheckHook
     hypothesis

@@ -1,24 +1,26 @@
-{ lib
-, stdenv
-, rustPlatform
-, fetchFromGitHub
-, Security
+{
+  lib,
+  stdenv,
+  rustPlatform,
+  fetchFromGitHub,
+  Security,
 }:
 
 rustPlatform.buildRustPackage rec {
   pname = "bore-cli";
-  version = "0.4.0";
+  version = "0.5.2";
 
   src = fetchFromGitHub {
     owner = "ekzhang";
     repo = "bore";
     rev = "v${version}";
-    hash = "sha256-ywdJH39OYLaM4st/DIcvvtIUzExpbAucMMpqouJL1yI=";
+    hash = "sha256-Wkhcv8q/dGRJqG7ArsnsPsRBnXdScGedwxunbOzAjyY=";
   };
 
-  cargoSha256 = "sha256-ZnEVTFiPo3AFyo1BoV88X2nCqYzRK6PkcbawiR+QnV0=";
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-va6d7Z5WUeokP77v/xidsMJCXHa8EKQ0gemNd1Naqdk=";
 
-  buildInputs = lib.optional stdenv.isDarwin [
+  buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [
     Security
   ];
 

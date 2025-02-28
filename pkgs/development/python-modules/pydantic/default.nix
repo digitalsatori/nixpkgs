@@ -1,95 +1,108 @@
-{ lib
-, buildPythonPackage
-, cython
-, devtools
-, email-validator
-, fetchFromGitHub
-, pytest-mock
-, pytestCheckHook
-, python-dotenv
-, pythonOlder
-, typing-extensions
-# dependencies for building documentation.
-, ansi2html
-, markdown-include
-, mkdocs
-, mkdocs-exclude
-, mkdocs-material
-, mdx-truly-sane-lists
-, sqlalchemy
-, ujson
-, orjson
-, hypothesis
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+
+  # build-system
+  hatchling,
+  hatch-fancy-pypi-readme,
+
+  # native dependencies
+  libxcrypt,
+
+  # dependencies
+  annotated-types,
+  pydantic-core,
+  typing-extensions,
+
+  # tests
+  cloudpickle,
+  email-validator,
+  dirty-equals,
+  jsonschema,
+  pytestCheckHook,
+  pytest-mock,
+  eval-type-backport,
+  rich,
 }:
 
 buildPythonPackage rec {
   pname = "pydantic";
-  version = "1.9.0";
-  outputs = [ "out" "doc" ];
-  disabled = pythonOlder "3.7";
+  version = "2.10.5";
+  pyproject = true;
+
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
-    owner = "samuelcolvin";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-C4WP8tiMRFmkDkQRrvP3yOSM2zN8pHJmX9cdANIckpM=";
+    owner = "pydantic";
+    repo = "pydantic";
+    tag = "v${version}";
+    hash = "sha256-SEgBuhof1rqnKFI7O1aajkgp17EgaPNcfJzbh/j4ebg=";
   };
 
-  postPatch = ''
-    sed -i '/flake8/ d' Makefile
-  '';
+  buildInputs = lib.optionals (pythonOlder "3.9") [ libxcrypt ];
 
-  nativeBuildInputs = [
-    cython
-
-    # dependencies for building documentation
-    ansi2html
-    markdown-include
-    mdx-truly-sane-lists
-    mkdocs
-    mkdocs-exclude
-    mkdocs-material
-    sqlalchemy
-    ujson
-    orjson
-    hypothesis
+  build-system = [
+    hatch-fancy-pypi-readme
+    hatchling
   ];
 
-  propagatedBuildInputs = [
-    devtools
-    email-validator
-    python-dotenv
+  dependencies = [
+    annotated-types
+    pydantic-core
     typing-extensions
   ];
 
-  checkInputs = [
-    pytest-mock
-    pytestCheckHook
-  ];
+  optional-dependencies = {
+    email = [ email-validator ];
+  };
+
+  nativeCheckInputs =
+    [
+      cloudpickle
+      dirty-equals
+      jsonschema
+      pytest-mock
+      pytestCheckHook
+      rich
+    ]
+    ++ lib.flatten (lib.attrValues optional-dependencies)
+    ++ lib.optionals (pythonOlder "3.10") [ eval-type-backport ];
 
   preCheck = ''
     export HOME=$(mktemp -d)
+    substituteInPlace pyproject.toml \
+      --replace-fail "'--benchmark-columns', 'min,mean,stddev,outliers,rounds,iterations'," "" \
+      --replace-fail "'--benchmark-group-by', 'group'," "" \
+      --replace-fail "'--benchmark-warmup', 'on'," "" \
+      --replace-fail "'--benchmark-disable'," ""
   '';
 
-  # Must include current directory into PYTHONPATH, since documentation
-  # building process expects "import pydantic" to work.
-  preBuild = ''
-    PYTHONPATH=$PWD:$PYTHONPATH make docs
-  '';
+  pytestFlagsArray = [
+    # suppress warnings with pytest>=8
+    "-Wignore::pydantic.warnings.PydanticDeprecatedSince20"
+    "-Wignore::pydantic.json_schema.PydanticJsonSchemaWarning"
+  ];
 
-  # Layout documentation in same way as "sphinxHook" does.
-  postInstall = ''
-    mkdir -p $out/share/doc/$name
-    mv ./site $out/share/doc/$name/html
-  '';
+  disabledTests = [
+    # disable failing test with pytest>=8
+    "test_assert_raises_validation_error"
+  ];
 
-  enableParallelBuilding = true;
+  disabledTestPaths = [
+    "tests/benchmarks"
+
+    # avoid cyclic dependency
+    "tests/test_docs.py"
+  ];
 
   pythonImportsCheck = [ "pydantic" ];
 
   meta = with lib; {
-    homepage = "https://github.com/samuelcolvin/pydantic";
     description = "Data validation and settings management using Python type hinting";
+    homepage = "https://github.com/pydantic/pydantic";
+    changelog = "https://github.com/pydantic/pydantic/blob/${src.tag}/HISTORY.md";
     license = licenses.mit;
     maintainers = with maintainers; [ wd15 ];
   };
